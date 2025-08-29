@@ -639,6 +639,45 @@
           }
         }
 
+        /* desktop/tablet: zoals je nu hebt (logo links) */
+        .header-left{
+          position: absolute;
+          left: 16px;
+          top: 12px;
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 6px;
+        }
+
+        /* badge niet absoluut, gewoon onder het logo */
+        .site-header .app-version{
+          position: static;
+        }
+
+        /* GSM: header-kolom naar rechtsboven; logo boven, badge eronder, beide rechts uitgelijnd */
+        @media (max-width: 480px){
+          .site-header{
+            /* ruimte rechts vrijhouden voor logo+badge kolom */
+            padding-left: 12px;
+            padding-right: 84px;
+          }
+          .header-left{
+            left: auto;           /* override de desktop-positie */
+            right: 16px;          /* naar rechts */
+            top: 12px;
+            align-items: flex-end;/* rechts uitlijnen van de stapel */
+          }
+          .brand-logo{
+            height: 26px;         /* iets compacter op gsm */
+            width: auto;
+          }
+          .site-header .app-version{
+            display: inline-block;/* onder het logo */
+            margin-top: 2px;      /* klein beetje ruimte */
+            text-align: right;    /* tekst ook rechts */
+          }
+        }
 
 
     </style>
@@ -646,17 +685,15 @@
 <body>
     <div class="container">
         <header class="site-header">
-          <!-- vast links -->
           <div class="header-left">
             <img src="rectusoft.png" alt="Rectusoft" class="brand-logo">
-          </div>
-            <div class="logo">
-                <!--<span class="logo-icon"><i class="fas fa-water"></i></span>-->
-                <span>Canoepolo Scouting</span>
-            </div>
-            <p>Track results of canoepolo players</p>
             <div class="app-version">FREE VERSION</div>
+          </div>
+
+          <div class="logo"><span>Canoepolo Scouting</span></div>
+          <p>Track results of canoepolo players</p>
         </header>
+
         
         <div id="setupScreen" class="setup-screen">
             <div class="setup-title"><i class="fas fa-cog"></i> Game Settings</div>
