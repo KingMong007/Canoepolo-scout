@@ -369,7 +369,6 @@
         }
         
         .goalkeeper-buttons {
-            display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 12px;
             margin-bottom: 15px;
@@ -487,14 +486,6 @@
             cursor: pointer;
         }
         
-        .scouting-details {
-            margin-top: 10px;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-            font-size: 14px;
-        }
-        
         .scouting-detail-item {
             display: flex;
             justify-content: space-between;
@@ -546,16 +537,20 @@
         }
 
         /* Meer witruimte tussen kolommen in scouting-details */
+        /* Basis: 2 kolommen, iets ruimere kolom-gap */
         .scouting-details {
-          /* eerste waarde = rij-gap, tweede = kolom-gap */
-          gap: 10px 28px;
+          margin-top: 10px;
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 10px 28px;   /* rij-gap 10, kolom-gap 28 */
+          font-size: 14px;
         }
 
-        /* Op grotere schermen nog iets ruimer */
+        /* Tablet/desktop: 3 kolommen en nog wat meer ruimte */
         @media (min-width: 768px) {
           .scouting-details {
             grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 12px 36px; /* rij-gap 12, kolom-gap 36 */
+            gap: 12px 36px;
           }
         }
 
@@ -910,8 +905,8 @@
                     <p>Total shots: <span id="totalShots">0</span></p>
                     <p>Assists: <span id="assist">0</span></p>
                     <p>Interceptions: <span id="totalInterceptions">0</span></p>
-                    <p id="goalsAgainstText" style="display:none;">Goals against: <span id="goalsAgainst">0</span></p>
-                    <p id="goalsDefendedText" style="display:none;">Goals defended: <span id="goalsDefended">0</span></p>
+                    <p id="goalsAgainstText" style="display:none;">Goals against: <span id="goalsAgainstStat">0</span></p>
+                    <p id="goalsDefendedText" style="display:none;">Goals defended: <span id="goalsDefendedStat">0</span></p>
                   </div>
                 </div>
                 
@@ -1480,8 +1475,9 @@
     $('totalShots') && ($('totalShots').textContent = totalShots);
     $('totalInterceptions') && ($('totalInterceptions').textContent = counters.interceptions || 0);
     $('assist')             && ($('assist').textContent             = counters.assists || 0);
-    $('goalsAgainst')       && ($('goalsAgainst').textContent       = counters.goalsAgainst || 0);
-    $('goalsDefended')      && ($('goalsDefended').textContent      = counters.goalsDefended || 0);
+    $('goalsAgainstStat')  && ($('goalsAgainstStat').textContent  = counters.goalsAgainst || 0);
+    $('goalsDefendedStat') && ($('goalsDefendedStat').textContent = counters.goalsDefended || 0);
+
 
     // Live Save% tonen (optioneel)
     if ($('keeperSavePct')) {
