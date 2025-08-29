@@ -166,7 +166,7 @@
             margin-bottom: 5px;
             font-weight: bold;
             color: #1a2a6c;
-            font-size: 14px;
+            font-size: 12px;
         }
         
         .input-group input, .input-group select {
@@ -294,7 +294,7 @@
             padding: 12px;
             border: none;
             border-radius: 10px;
-            font-size: 18px;
+            font-size: 14px;
             font-weight: bold;
             cursor: pointer;
             transition: transform 0.2s, background 0.2s;
@@ -315,7 +315,7 @@
         }
         
         .stat-value {
-            font-size: 24px;
+            font-size: 20px;
             font-weight: bold;
             color: #2c3e50;
             margin: 5px 0;
@@ -323,7 +323,7 @@
         
         .btn-small {
             padding: 8px;
-            font-size: 14px;
+            font-size: 12px;
             width: 50px;
             border: none;
             font-weight: bold;
@@ -587,7 +587,7 @@
           min-height: 88px;    /* eventueel 72–96px, wat je mooi vindt */
           padding: 12px 72px;  /* ruimte links/rechts voor logo & label */
         }
-        
+
         /* === Responsive playtime label === */
         .playtime-section {
           flex-wrap: wrap;           /* mag afbreken op kleine schermen */
@@ -630,6 +630,20 @@
             margin-right: 6px;           /* iets compacter op gsm */
           }
         }
+
+        /* tabs: op gsm alleen iconen tonen */
+        @media (max-width: 480px) {
+          .tabs .tab {
+            font-size: 0;          /* verbergt de tekst */
+            padding: 10px 0;       /* compacter */
+          }
+          .tabs .tab i {
+            font-size: 18px;       /* icon blijft zichtbaar */
+            line-height: 1;
+            margin: 0;             /* geen extra ruimte rond icon */
+          }
+        }
+
 
 
     </style>
@@ -685,10 +699,10 @@
             </div>
             
             <div class="tabs">
-                <div class="tab active" onclick="switchTab('scouting')"><i class="fas fa-binoculars"></i> Scouting</div>
-                <div class="tab" onclick="switchTab('stats')"><i class="fas fa-chart-bar"></i> Stats</div>
-                <div class="tab" onclick="switchTab('scorepanel')"><i class="fas fa-cog"></i> Score panel</div>
-                <div class="tab" onclick="switchTab('settings')"><i class="fas fa-cog"></i> General Settings</div>
+                <div class="tab active" onclick="switchTab('scouting')"aria-label="Scouting"><i class="fas fa-binoculars"></i> Scouting</div>
+                <div class="tab" onclick="switchTab('stats')" aria-label="Stats"><i class="fas fa-chart-bar"></i> Stats</div>
+                <div class="tab" onclick="switchTab('scorepanel')"aria-label="Scorepanel"><i class="fas fa-cog"></i> Panel</div>
+                <div class="tab" onclick="switchTab('settings')"aria-label="Settings"><i class="fas fa-cog"></i> Settings</div>
                 
             </div>
             
