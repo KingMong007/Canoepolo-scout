@@ -587,6 +587,49 @@
           min-height: 88px;    /* eventueel 72–96px, wat je mooi vindt */
           padding: 12px 72px;  /* ruimte links/rechts voor logo & label */
         }
+        
+        /* === Responsive playtime label === */
+        .playtime-section {
+          flex-wrap: wrap;           /* mag afbreken op kleine schermen */
+          gap: 8px 12px;             /* wat lucht tussen label en timer */
+        }
+
+        .playtime-display {
+          /* Fluid font en breedte: groeit op grote schermen, krimpt op kleine */
+          font-size: clamp(16px, 6vw, 24px);
+          padding: 0.35em 0.75em;
+          min-width: clamp(70px, 22vw, 110px);
+          line-height: 1;
+          border-radius: 14px;       /* iets subtieler op mobiel */
+        }
+
+        /* Extra kleine schermen (smalle gsm's) */
+        @media (max-width: 380px) {
+          .playtime-label { font-size: 14px; }
+          .playtime-label i { font-size: 1rem; }
+          .playtime-display {
+            font-size: clamp(15px, 7vw, 20px);
+            padding: 0.3em 0.6em;
+            min-width: clamp(64px, 24vw, 96px);
+          }
+        }
+
+        /* Logo links uitlijnen op kleine schermen */
+        @media (max-width: 480px) {
+          header { 
+            text-align: left;            /* ook de subtitel links */
+            padding-left: 12px;          /* wat lucht links */
+            padding-right: 60px;         /* ruimte voor de "FREE VERSION" badge rechts */
+          }
+          .logo {
+            justify-content: flex-start; /* icon + tekst links binnen de logo-div */
+            margin-left: 0; 
+            margin-right: auto;          /* forceer naar links */
+          }
+          .logo-icon { 
+            margin-right: 6px;           /* iets compacter op gsm */
+          }
+        }
 
 
     </style>
