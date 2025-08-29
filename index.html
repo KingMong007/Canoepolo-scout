@@ -661,6 +661,9 @@
             /* ruimte rechts vrijhouden voor logo+badge kolom */
             padding-left: 12px;
             padding-right: 84px;
+            /*hier wordt de knop op de header modify player verborgen op eengsm*/
+             .player-header .edit-player-btn {
+            display: none;
           }
           .header-left{
             left: auto;           /* override de desktop-positie */
@@ -683,6 +686,10 @@
         .site-header .app-version{
           background: #F7921E;   /* donker oranje */
           color: #fff;           /* betere contrast */
+        }
+        /* Voorkom pull-to-refresh / overscroll-refresh op Android/Chrome */
+        html, body {
+          overscroll-behavior-y: none;
         }
 
 
@@ -862,6 +869,12 @@
             
             <div id="settings" class="tab-content">
                 <h2><i class="fas fa-cog"></i>App Settings</h2>
+                <div class="action-buttons" style="margin-bottom:12px;">
+                  <button class="edit-player-btn btn-large" onclick="showSetupScreen()">
+                    <i class="fas fa-edit"></i> Modify player
+                  </button>
+                </div>
+
                 <div class="settings-grid">
 
                      <!-- Dit stuk wordt niet getoond -->
@@ -929,6 +942,7 @@
             </div>
 
             <div id="scorepanel" class="tab-content">
+                <h2> Score panel en resetclock</h2> 
                 <h2><i class="fas fa-person-digging"></i> Under construction</h2> 
             </div>
             
@@ -976,9 +990,9 @@
     </div>
 
    <script>
-  // Simpele teller functionaliteit - Volgorde aangepast zodat onderscheppingen eerst komt
+  // ====== STATE ======
   const counters = {
-    interceptions: 0,  // Nu bovenaan
+    interceptions: 0,
     assists: 0,
     goals: 0,
     attempts: 0,
@@ -988,6 +1002,8 @@
     goalsDefended: 0
   };
 
+  const LIVE_STATE_KEY = 'liveStateV1';
+
   const history = [];
   let playtime = 0; // in seconden
   let playtimeInterval = null;
@@ -995,74 +1011,65 @@
   let savedScoutings = [];
   let isGoalkeeper = false;
 
-  // Update de samengevatte spelerinfo
+  // ====== UI HELPERS ======
+  function $(id){ return document.getElementById(id); }
+
+  // Samengevatte spelerinfo
   function updatePlayerInfoCompact() {
-    const playerName = document.getElementById('playerName').value;
-    const playerNumber = document.getElementById('playerNumber').value;
-    const ownTeam = document.getElementById('ownTeam').value;
-    const opponent = document.getElementById('opponent').value;
+    const playerName = $('playerName').value;
+    const playerNumber = $('playerNumber').value;
+    const ownTeam = $('ownTeam').value;
+    const opponent = $('opponent').value;
 
     let infoText = "";
     if (playerName) {
       infoText += `${playerName}`;
-      if (playerNumber) {
-        infoText += ` (#${playerNumber})`;
-      }
+      if (playerNumber) infoText += ` (#${playerNumber})`;
     }
-
     if (ownTeam) {
       if (infoText) infoText += " | ";
       infoText += `${ownTeam}`;
     }
-
     if (opponent) {
       if (infoText) infoText += " vs ";
       infoText += `${opponent}`;
     }
-
-    document.getElementById('playerInfoCompact').textContent = infoText || "No player information";
+    $('playerInfoCompact').textContent = infoText || "No player information";
   }
 
-  // Schakel knoppen in/uit op basis van speelstatus (behalve einde wedstrijd knop)
+  // Knoppen (de)activeren
   function toggleButtons(enabled) {
-    const buttons = [
-      'interceptionBtn', 'interceptionMinusBtn',
-      'assistBtn', 'assistMinusBtn',
-      'goalBtn', 'goalMinusBtn',
-      'attemptBtn', 'attemptMinusBtn',
-      'goodPassBtn', 'goodPassMinusBtn',
-      'badPassBtn', 'badPassMinusBtn',
-      'addMinuteBtn', 'subtractMinuteBtn',
-      'goalsAgainstBtn', 'goalsAgainstMinusBtn',
-      'goalsDefendedBtn', 'goalsDefendedMinusBtn'
-    ];
-
-    buttons.forEach(btnId => {
-      const btn = document.getElementById(btnId);
-      if (btn) {
-        btn.disabled = !enabled;
-      }
-    });
+    [
+      'interceptionBtn','interceptionMinusBtn',
+      'assistBtn','assistMinusBtn',
+      'goalBtn','goalMinusBtn',
+      'attemptBtn','attemptMinusBtn',
+      'goodPassBtn','goodPassMinusBtn',
+      'badPassBtn','badPassMinusBtn',
+      'addMinuteBtn','subtractMinuteBtn',
+      'goalsAgainstBtn','goalsAgainstMinusBtn',
+      'goalsDefendedBtn','goalsDefendedMinusBtn'
+    ].forEach(id => { const b = $(id); if (b) b.disabled = !enabled; });
   }
 
-  // Toon/verberg keeper knoppen
+  // Keeper UI
   function toggleGoalkeeperButtons() {
-    isGoalkeeper = document.getElementById('isGoalkeeper').checked;
-    const keeperSection = document.getElementById('goalkeeperSection');
-    const keeperButtons  = document.getElementById('goalkeeperButtons');
-    const goalsAgainstText  = document.getElementById('goalsAgainstText');
-    const goalsDefendedText = document.getElementById('goalsDefendedText');
+    isGoalkeeper = $('isGoalkeeper').checked;
+    const keeperSection = $('goalkeeperSection');
+    const keeperButtons = $('goalkeeperButtons');
+    const goalsAgainstText = $('goalsAgainstText');
+    const goalsDefendedText = $('goalsDefendedText');
 
     if (isGoalkeeper) {
       keeperSection.style.display = 'block';
       keeperButtons.style.display = 'grid';
-      goalsAgainstText.style.display = 'block';
-      goalsDefendedText.style.display = 'block';
+      if (goalsAgainstText) goalsAgainstText.style.display = 'block';
+      if (goalsDefendedText) goalsDefendedText.style.display = 'block';
     } else {
       keeperSection.style.display = 'none';
       keeperButtons.style.display = 'none';
-      goalsAgainstText.style.display = 'none';
-      goalsDefendedText.style.display = 'none';
+      if (goalsAgainstText) goalsAgainstText.style.display = 'none';
+      if (goalsDefendedText) goalsDefendedText.style.display = 'none';
       counters.goalsAgainst = 0;
       counters.goalsDefended = 0;
       updateDisplay('goalsAgainst');
@@ -1070,139 +1077,96 @@
     }
   }
 
-  // Toon setup scherm voor bewerken
+  // Setup -> invullen
   function showSetupScreen() {
-    document.getElementById('setupScreen').style.display = 'block';
-    document.getElementById('mainContent').style.display = 'none';
-
-    // Vul de velden in met bestaande waarden
-    document.getElementById('setupPlayerName').value   = document.getElementById('playerName').value;
-    document.getElementById('setupPlayerNumber').value = document.getElementById('playerNumber').value;
-    document.getElementById('setupOwnTeam').value      = document.getElementById('ownTeam').value;
-    document.getElementById('setupOpponent').value     = document.getElementById('opponent').value;
-    document.getElementById('setupIsGoalkeeper').checked = document.getElementById('isGoalkeeper').checked;
+    $('setupScreen').style.display = 'block';
+    $('mainContent').style.display = 'none';
+    $('setupPlayerName').value   = $('playerName').value;
+    $('setupPlayerNumber').value = $('playerNumber').value;
+    $('setupOwnTeam').value      = $('ownTeam').value;
+    $('setupOpponent').value     = $('opponent').value;
+    $('setupIsGoalkeeper').checked = $('isGoalkeeper').checked;
   }
 
-  // Setup functies
+  // Setup -> bewaren
   function saveSetup() {
-    const playerName   = document.getElementById('setupPlayerName').value;
-    const playerNumber = document.getElementById('setupPlayerNumber').value;
-    const ownTeam      = document.getElementById('setupOwnTeam').value;
-    const opponent     = document.getElementById('setupOpponent').value;
-    const isGoalkeeper = document.getElementById('setupIsGoalkeeper').checked;
+    const playerName   = $('setupPlayerName').value;
+    const playerNumber = $('setupPlayerNumber').value;
+    const ownTeam      = $('setupOwnTeam').value;
+    const opponent     = $('setupOpponent').value;
+    const isGK         = $('setupIsGoalkeeper').checked;
 
     if (!playerName || !playerNumber || !ownTeam || !opponent) {
       alert("Fill in all fields to start scouting!");
       return;
     }
 
-    // Opslaan in instellingen
-    document.getElementById('playerName').value   = playerName;
-    document.getElementById('playerNumber').value = playerNumber;
-    document.getElementById('ownTeam').value      = ownTeam;
-    document.getElementById('opponent').value     = opponent;
-    document.getElementById('isGoalkeeper').checked = isGoalkeeper;
+    $('playerName').value   = playerName;
+    $('playerNumber').value = playerNumber;
+    $('ownTeam').value      = ownTeam;
+    $('opponent').value     = opponent;
+    $('isGoalkeeper').checked = isGK;
 
-    // Opslaan in localStorage
     localStorage.setItem('playerName', playerName);
     localStorage.setItem('playerNumber', playerNumber);
     localStorage.setItem('ownTeam', ownTeam);
     localStorage.setItem('opponent', opponent);
-    localStorage.setItem('isGoalkeeper', isGoalkeeper);
+    localStorage.setItem('isGoalkeeper', isGK);
 
-    // Update samengevatte info
     updatePlayerInfoCompact();
-
-    // Update keeper status
     toggleGoalkeeperButtons();
 
-    // Verberg setup en toon hoofdcontent
-    document.getElementById('setupScreen').style.display = 'none';
-    document.getElementById('mainContent').style.display = 'block';
+    $('setupScreen').style.display = 'none';
+    $('mainContent').style.display = 'block';
+
+    saveLiveState();
   }
 
+  // ====== EINDE WEDSTRIJD ======
   function endGame() {
-    const playerName   = document.getElementById('playerName').value;
-    const playerNumber = document.getElementById('playerNumber').value;
-    const ownTeam      = document.getElementById('ownTeam').value;
-    const opponent     = document.getElementById('opponent').value;
+    const playerName   = $('playerName').value;
+    const playerNumber = $('playerNumber').value;
+    const ownTeam      = $('ownTeam').value;
+    const opponent     = $('opponent').value;
 
-    if (!playerName) {
-      alert("Please enter the player's name!");
-      return;
-    }
+    if (!playerName) { alert("Please enter the player's name!"); return; }
 
-    // --- Statistieken ---
     const totalPasses = (counters.goodPasses || 0) + (counters.badPasses || 0);
     const passAccuracy = totalPasses > 0
-      ? Math.round((counters.goodPasses / totalPasses) * 100)
-      : 0;
+      ? Math.round((counters.goodPasses / totalPasses) * 100) : 0;
 
-    // Veldschoten
     const totalShots = getTotalShots(counters);
     const shotAccuracy = totalShots > 0
-      ? Math.round((counters.goals / totalShots) * 100)
-      : 0;
+      ? Math.round((counters.goals / totalShots) * 100) : 0;
 
-    // Keeper Save%
     const savePct = calcSavePct(counters);
 
     const minutesPlayed = playtime / 60;
-
     const involvement = minutesPlayed > 0
-      ? involvementPerMinute(counters, minutesPlayed, { passesIncludeAssists: true })
-      : 0.0;
+      ? involvementPerMinute(counters, minutesPlayed, { passesIncludeAssists: true }) : 0.0;
 
-    // --- Scouting object ---
     const scouting = {
       id: Date.now(),
       date: new Date().toLocaleString('nl-NL'),
-      playerName,
-      playerNumber,
-      ownTeam,
-      opponent,
-      playtime,
-      isGoalkeeper,
+      playerName, playerNumber, ownTeam, opponent,
+      playtime, isGoalkeeper,
       stats: { ...counters },
-      totals: {
-        totalPasses,
-        passAccuracy,
-        shotAccuracy,
-        involvement,
-        savePct
-      }
+      totals: { totalPasses, passAccuracy, shotAccuracy, involvement, savePct }
     };
 
-    // Opslaan
     savedScoutings.push(scouting);
     localStorage.setItem('savedScoutings', JSON.stringify(savedScoutings));
 
-    // Update UI
     updateScoutingsList();
-
     alert(`Game of ${playerName} is saved!`);
 
-    // Reset voor volgende speler
+    // Reset & live state wissen
     resetAll();
+    localStorage.removeItem(LIVE_STATE_KEY);
   }
 
-  /**
-   * Betrokkenheid per minuut zonder dubbeltellingen.
-   * - Assists tel je als aparte events.
-   * - Goals en attempts zijn disjunct; totaal schoten = goals + attempts.
-   * - Passes exclusief assists (als assists al in goodPasses zaten).
-   *
-   * @param {object} counters
-   * @param {number} minutesPlayed  // in MINUTEN
-   * @param {object} [opts]
-   * @param {boolean} [opts.passesIncludeAssists=true]  // zet op false als jouw good/badPasses assists al uitsluiten
-   * @returns {number} betrokkenheid per minuut (1 decimaal)
-   */
-  function involvementPerMinute(
-    counters,
-    minutesPlayed,
-    { passesIncludeAssists = true } = {}
-  ) {
+  // ====== METRICS ======
+  function involvementPerMinute(counters, minutesPlayed, { passesIncludeAssists = true } = {}) {
     const m = +minutesPlayed || 0;
     if (m <= 0) return 0.0;
 
@@ -1210,54 +1174,48 @@
     const bad  = +counters.badPasses  || 0;
     const ast  = +counters.assists    || 0;
     const g    = +counters.goals      || 0;
-    const att  = +counters.attempts   || 0;        // hier: pogingen ZONDER goal
+    const att  = +counters.attempts   || 0;
     const ints = +counters.interceptions || 0;
 
-    // Passes exclusief assists, om dubbeltelling te vermijden
     const passesTotal = good + bad;
-    const passesExclAssists = passesIncludeAssists
-      ? Math.max(0, passesTotal - ast)   // defensief: nooit negatief
-      : passesTotal;
+    const passesExclAssists = passesIncludeAssists ? Math.max(0, passesTotal - ast) : passesTotal;
 
-    // Volume = elke unieke actie precies één keer
-    const rawInvolvement =
-      passesExclAssists + ast + att + g + ints;
-
+    const rawInvolvement = passesExclAssists + ast + att + g + ints;
     const perMin = rawInvolvement / m;
-    return Math.round(perMin * 10) / 10; // 1 decimaal
+    return Math.round(perMin * 10) / 10;
   }
 
+  function getTotalShots(c) {
+    return (Number(c.goals) || 0) + (Number(c.attempts) || 0);
+  }
+
+  // Keeper Save% helper (Save% = saves / (saves + GA) * 100)
+  function calcSavePct(c) {
+    const ga = (+c.goalsAgainst)  || 0;  // goals against
+    const sv = (+c.goalsDefended) || 0;  // goals saved
+    const shots = ga + sv;               // shots faced
+    return shots > 0 ? Math.round((sv / shots) * 100) : 0;
+  }
+
+  // ====== SCOUTING LIJST ======
   function updateScoutingsList() {
-    const container = document.getElementById('savedScoutings');
-
-    if (savedScoutings.length === 0) {
-      container.innerHTML = '<p>No scouting reports saved yet.</p>';
-      return;
-    }
-
+    const container = $('savedScoutings');
+    if (savedScoutings.length === 0) { container.innerHTML = '<p>No scouting reports saved yet.</p>'; return; }
     container.innerHTML = '';
 
-    // Sorteer van nieuwste naar oudste
-    const sortedScoutings = [...savedScoutings].sort((a, b) => b.id - a.id);
-
-    sortedScoutings.forEach(scouting => {
+    const sorted = [...savedScoutings].sort((a,b)=>b.id-a.id);
+    sorted.forEach(scouting => {
       const item = document.createElement('div');
       item.className = 'scouting-item';
 
-      // Tijd
       const minutes = Math.floor((scouting.playtime ?? 0) / 60);
       const seconds = (scouting.playtime ?? 0) % 60;
-      const playtimeStr = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+      const playtimeStr = `${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
 
-      // Fallback berekening voor involvement (per minuut) als het niet opgeslagen is
       const stats = scouting.stats || {};
       const raw =
-        (stats.goodPasses ?? 0) +
-        (stats.badPasses ?? 0) +
-        (stats.goals ?? 0) +
-        (stats.attempts ?? 0) +
-        (stats.assists ?? 0) +
-        (stats.interceptions ?? 0);
+        (stats.goodPasses ?? 0) + (stats.badPasses ?? 0) + (stats.goals ?? 0) +
+        (stats.attempts ?? 0) + (stats.assists ?? 0) + (stats.interceptions ?? 0);
 
       const minutesPlayed = (scouting.playtime ?? 0) / 60;
       const fallbackInvolvement = minutesPlayed > 0 ? (raw / minutesPlayed).toFixed(1) : '0.0';
@@ -1266,23 +1224,19 @@
         scouting.totals && scouting.totals.involvement !== undefined && scouting.totals.involvement !== null;
 
       const involvementToShow = hasStoredInvolvement
-        ? Number(scouting.totals.involvement).toFixed(1)
-        : fallbackInvolvement;
+        ? Number(scouting.totals.involvement).toFixed(1) : fallbackInvolvement;
 
-      // Null-safe totals
       const totals = scouting.totals || {};
       const passAcc = totals.passAccuracy ?? 0;
       const shotAcc = totals.shotAccuracy ?? 0;
       const totalPasses = totals.totalPasses ?? ((stats.goodPasses ?? 0) + (stats.badPasses ?? 0));
 
-      // Shots (aanval) en keeper-metrics
       const ga = stats.goalsAgainst ?? 0;
       const sv = stats.goalsDefended ?? 0;
       const totalShots = (stats.goals ?? 0) + (stats.attempts ?? 0);
       const shotsFaced = ga + sv;
       const savedSavePct = (scouting.totals && typeof scouting.totals.savePct === 'number')
-        ? scouting.totals.savePct
-        : (shotsFaced > 0 ? Math.round((sv / shotsFaced) * 100) : 0);
+        ? scouting.totals.savePct : (shotsFaced > 0 ? Math.round((sv / shotsFaced) * 100) : 0);
 
       item.innerHTML = `
         <div class="scouting-header">
@@ -1313,10 +1267,8 @@
             <div class="scouting-detail-item"><span>Goals defended:</span> <span>${sv}</span></div>
             <div class="scouting-detail-item"><span>Goals against:</span> <span>${ga}</span></div>
           ` : ''}
-
         </div>
       `;
-
       container.appendChild(item);
     });
   }
@@ -1329,68 +1281,48 @@
     }
   }
 
-  // Laad instellingen van localStorage
+  // ====== SETTINGS LOAD/SAVE ======
   function loadSettings() {
     const playerName = localStorage.getItem('playerName');
-    if (playerName) {
-      document.getElementById('playerName').value = playerName;
-      document.getElementById('setupPlayerName').value = playerName;
-    }
+    if (playerName) { $('playerName').value = playerName; $('setupPlayerName').value = playerName; }
 
     const playerNumber = localStorage.getItem('playerNumber');
-    if (playerNumber) {
-      document.getElementById('playerNumber').value = playerNumber;
-      document.getElementById('setupPlayerNumber').value = playerNumber;
-    }
+    if (playerNumber) { $('playerNumber').value = playerNumber; $('setupPlayerNumber').value = playerNumber; }
 
     const ownTeam = localStorage.getItem('ownTeam');
-    if (ownTeam) {
-      document.getElementById('ownTeam').value = ownTeam;
-      document.getElementById('setupOwnTeam').value = ownTeam;
-    }
+    if (ownTeam) { $('ownTeam').value = ownTeam; $('setupOwnTeam').value = ownTeam; }
 
     const opponent = localStorage.getItem('opponent');
-    if (opponent) {
-      document.getElementById('opponent').value = opponent;
-      document.getElementById('setupOpponent').value = opponent;
-    }
+    if (opponent) { $('opponent').value = opponent; $('setupOpponent').value = opponent; }
 
     const halfDuration = localStorage.getItem('halfDuration');
-    if (halfDuration) {
-      document.getElementById('halfDuration').value = halfDuration;
-    }
+    if (halfDuration) { $('halfDuration').value = halfDuration; }
 
     const numberOfHalves = localStorage.getItem('numberOfHalves');
-    if (numberOfHalves) {
-      document.getElementById('numberOfHalves').value = numberOfHalves;
-    }
+    if (numberOfHalves) { $('numberOfHalves').value = numberOfHalves; }
 
     const isGoalkeeperSetting = localStorage.getItem('isGoalkeeper');
     if (isGoalkeeperSetting) {
-      document.getElementById('isGoalkeeper').checked = isGoalkeeperSetting === 'true';
-      document.getElementById('setupIsGoalkeeper').checked = isGoalkeeperSetting === 'true';
+      $('isGoalkeeper').checked = isGoalkeeperSetting === 'true';
+      $('setupIsGoalkeeper').checked = isGoalkeeperSetting === 'true';
       isGoalkeeper = isGoalkeeperSetting === 'true';
       toggleGoalkeeperButtons();
     }
 
     const scoutings = localStorage.getItem('savedScoutings');
-    if (scoutings) {
-      savedScoutings = JSON.parse(scoutings);
-      updateScoutingsList();
-    }
+    if (scoutings) { savedScoutings = JSON.parse(scoutings); updateScoutingsList(); }
 
     updatePlayerInfoCompact();
   }
 
-  // Sla instellingen op in localStorage
   function saveSettings() {
-    const playerName   = document.getElementById('playerName').value;
-    const playerNumber = document.getElementById('playerNumber').value;
-    const ownTeam      = document.getElementById('ownTeam').value;
-    const opponent     = document.getElementById('opponent').value;
-    const halfDuration = document.getElementById('halfDuration').value;
-    const numberOfHalves = document.getElementById('numberOfHalves').value;
-    const isGoalkeeper = document.getElementById('isGoalkeeper').checked;
+    const playerName   = $('playerName').value;
+    const playerNumber = $('playerNumber').value;
+    const ownTeam      = $('ownTeam').value;
+    const opponent     = $('opponent').value;
+    const halfDuration = $('halfDuration').value;
+    const numberOfHalves = $('numberOfHalves').value;
+    const isGK = $('isGoalkeeper').checked;
 
     localStorage.setItem('playerName', playerName);
     localStorage.setItem('playerNumber', playerNumber);
@@ -1398,67 +1330,60 @@
     localStorage.setItem('opponent', opponent);
     localStorage.setItem('halfDuration', halfDuration);
     localStorage.setItem('numberOfHalves', numberOfHalves);
-    localStorage.setItem('isGoalkeeper', isGoalkeeper);
+    localStorage.setItem('isGoalkeeper', isGK);
 
     updatePlayerInfoCompact();
     toggleGoalkeeperButtons();
-
     alert('Settings saved!');
+    saveLiveState();
   }
 
-  // Speeltijd functies
+  // ====== SPEELTIJD / CONTROLS ======
   function togglePlaytime() {
     isPlaying = !isPlaying;
-    const playtimeBtn = document.getElementById('playtimeBtn');
+    const playtimeBtn = $('playtimeBtn');
 
     if (isPlaying) {
       playtimeBtn.textContent = "Player is on the field";
       playtimeBtn.classList.remove('not-playing');
       playtimeBtn.classList.add('playing');
-
-      // Schakel knoppen in
       toggleButtons(true);
 
-      // Start de timer
+      clearInterval(playtimeInterval);
       playtimeInterval = setInterval(() => {
         playtime++;
         updatePlaytimeDisplay();
+        saveLiveState(); // autosave elke seconde
       }, 1000);
     } else {
       playtimeBtn.textContent = "Player is in the substitution zone";
       playtimeBtn.classList.remove('playing');
       playtimeBtn.classList.add('not-playing');
-
-      // Schakel knoppen uit
       toggleButtons(false);
-
-      // Stop de timer
       clearInterval(playtimeInterval);
     }
+    saveLiveState();
   }
 
   function addMinute() {
     playtime += 60;
     updatePlaytimeDisplay();
+    saveLiveState();
   }
 
   function subtractMinute() {
     if (playtime >= 60) {
       playtime -= 60;
       updatePlaytimeDisplay();
+      saveLiveState();
     }
   }
 
   function updatePlaytimeDisplay() {
     const minutes = Math.floor(playtime / 60);
     const seconds = playtime % 60;
-    document.getElementById('playtimeDisplay').textContent =
-      `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-
-    // Update ook in statistieken
-    document.getElementById('totalPlaytime').textContent =
-      `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-
+    $('playtimeDisplay').textContent = `${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
+    $('totalPlaytime').textContent   = `${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
     updateStats();
   }
 
@@ -1467,6 +1392,7 @@
     updateDisplay(counterName);
     history.push({type: 'increment', counter: counterName});
     updateStats();
+    saveLiveState();
   }
 
   function decrement(counterName) {
@@ -1475,83 +1401,52 @@
       updateDisplay(counterName);
       history.push({type: 'decrement', counter: counterName});
       updateStats();
+      saveLiveState();
     }
   }
 
   function updateDisplay(counterName) {
-    document.getElementById(counterName).textContent = counters[counterName];
+    const el = $(counterName);
+    if (el) el.textContent = counters[counterName];
   }
 
   function updateStats() {
-    // total passes & accuracies
     const totalPasses = (counters.goodPasses || 0) + (counters.badPasses || 0);
-    const passAccuracy = totalPasses > 0
-      ? Math.round((counters.goodPasses / totalPasses) * 100)
-      : 0;
+    const passAccuracy = totalPasses > 0 ? Math.round((counters.goodPasses / totalPasses) * 100) : 0;
 
-    // SHOT ACCURACY veldspeler: goals / (goals + attempts)
     const totalShots = getTotalShots(counters);
-    const shotAccuracy = totalShots > 0
-      ? Math.round((counters.goals / totalShots) * 100)
-      : 0;
+    const shotAccuracy = totalShots > 0 ? Math.round((counters.goals / totalShots) * 100) : 0;
 
-    // Keeper Save%
-    const savePct = calcSavePct(counters); // 0..100
-
-    // tijd (minuten)
+    const savePct = calcSavePct(counters);
     const minutesPlayed = playtime / 60;
-
-    // BETROKKENHEID — zonder dubbeltellingen
-    const involvementValue = involvementPerMinute(counters, minutesPlayed, {
-      // Zet op false als jouw good/badPasses assists al uitsluiten.
-      passesIncludeAssists: true
-    });
-
-    // schrijf naar DOM (alleen als elementen bestaan)
-    const $ = id => document.getElementById(id);
+    const involvementValue = involvementPerMinute(counters, minutesPlayed, { passesIncludeAssists: true });
 
     $('totalPasses')  && ($('totalPasses').textContent  = totalPasses);
     $('passAccuracy') && ($('passAccuracy').textContent = passAccuracy + '%');
     $('shotAccuracy') && ($('shotAccuracy').textContent = shotAccuracy + '%');
     $('involvement')  && ($('involvement').textContent  = involvementValue.toFixed(1));
+    $('totalShots')   && ($('totalShots').textContent   = totalShots);
 
-    $('totalShots') && ($('totalShots').textContent = totalShots);
     $('totalInterceptions') && ($('totalInterceptions').textContent = counters.interceptions || 0);
     $('assist')             && ($('assist').textContent             = counters.assists || 0);
-    $('goalsAgainstStat')  && ($('goalsAgainstStat').textContent  = counters.goalsAgainst || 0);
-    $('goalsDefendedStat') && ($('goalsDefendedStat').textContent = counters.goalsDefended || 0);
 
+    // Probeer beide mogelijke IDs voor deze twee (afhankelijk van jouw HTML)
+    if ($('goalsAgainstStat')) { $('goalsAgainstStat').textContent = counters.goalsAgainst || 0; }
+    if ($('goalsDefendedStat')) { $('goalsDefendedStat').textContent = counters.goalsDefended || 0; }
+    if ($('goalsAgainst')) { $('goalsAgainst').textContent = counters.goalsAgainst || 0; }
+    if ($('goalsDefended')) { $('goalsDefended').textContent = counters.goalsDefended || 0; }
 
-    // Live Save% tonen (optioneel)
-    if ($('keeperSavePct')) {
-      $('keeperSavePct').textContent = savePct + '%';
-    }
-    if ($('savePctText')) {
-      $('savePctText').style.display = isGoalkeeper ? 'block' : 'none';
-    }
+    if ($('keeperSavePct')) $('keeperSavePct').textContent = savePct + '%';
+    if ($('savePctText'))   $('savePctText').style.display = isGoalkeeper ? 'block' : 'none';
   }
 
   function switchTab(tabName) {
-    // Hide all tabs
-    document.querySelectorAll('.tab-content').forEach(tab => {
-      tab.classList.remove('active');
-    });
-
+    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+    $(tabName).classList.add('active');
     document.querySelectorAll('.tab').forEach(tab => {
-      tab.classList.remove('active');
+      if (tab.getAttribute('onclick').includes(tabName)) tab.classList.add('active');
     });
-
-    // Show selected tab
-    document.getElementById(tabName).classList.add('active');
-
-    // Activate tab button
-    document.querySelectorAll('.tab').forEach(tab => {
-      if (tab.getAttribute('onclick').includes(tabName)) {
-        tab.classList.add('active');
-      }
-    });
-
-    // Update stats when switching to stats tab
     if (tabName === 'stats') {
       updateStats();
       updateScoutingsList();
@@ -1559,47 +1454,109 @@
   }
 
   function resetAll() {
-    for (const key in counters) {
-      counters[key] = 0;
-      updateDisplay(key);
-    }
+    for (const key in counters) { counters[key] = 0; updateDisplay(key); }
     playtime = 0;
     updatePlaytimeDisplay();
-
-    if (isPlaying) {
-      togglePlaytime(); // Stop de timer als die loopt
-    }
-
+    if (isPlaying) togglePlaytime(); // stop timer
     history.length = 0;
     updateStats();
   }
 
-  // Laad instellingen wanneer de pagina geladen is
+  // ====== AUTO-SAVE / RESTORE ======
+  function hasProgress(){
+    if (playtime > 0) return true;
+    for (const k in counters){ if (counters[k] > 0) return true; }
+    return false;
+  }
+
+  function saveLiveState() {
+    const state = {
+      counters: { ...counters },
+      playtime,
+      isPlaying,
+      lastTick: Date.now(),
+      isGoalkeeper: $('isGoalkeeper')?.checked || false
+    };
+    localStorage.setItem(LIVE_STATE_KEY, JSON.stringify(state));
+  }
+
+  /** @returns {boolean} true als er state is hersteld */
+  function restoreLiveState() {
+    const raw = localStorage.getItem(LIVE_STATE_KEY);
+    if (!raw) return false;
+    try {
+      const s = JSON.parse(raw);
+
+      Object.assign(counters, s.counters || {});
+      playtime   = Number(s.playtime) || 0;
+      isPlaying  = !!s.isPlaying;
+
+      if (isPlaying && s.lastTick) {
+        const delta = Math.max(0, Math.floor((Date.now() - s.lastTick) / 1000));
+        playtime += delta;
+      }
+
+      if (typeof s.isGoalkeeper === 'boolean') {
+        const gk = $('isGoalkeeper');
+        if (gk) { gk.checked = s.isGoalkeeper; }
+        toggleGoalkeeperButtons();
+      }
+
+      for (const k in counters) updateDisplay(k);
+      updatePlaytimeDisplay();
+
+      if (isPlaying) {
+        clearInterval(playtimeInterval);
+        playtimeInterval = setInterval(() => {
+          playtime++;
+          updatePlaytimeDisplay();
+          saveLiveState();
+        }, 1000);
+        const btn = $('playtimeBtn');
+        if (btn) {
+          btn.textContent = "Player is on the field";
+          btn.classList.remove('not-playing');
+          btn.classList.add('playing');
+        }
+        toggleButtons(true);
+      }
+      return true;
+    } catch (e) {
+      console.error('restoreLiveState error', e);
+      return false;
+    }
+  }
+
+  // Waarschuw bij verlaten/herladen (alleen als er progress is)
+  window.addEventListener('beforeunload', (e) => {
+    saveLiveState();
+    if (hasProgress()) {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
+
+  // Extra vangnet: bij tab switch / app naar achtergrond
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) saveLiveState();
+  });
+
+  // ====== ONLOAD ======
   window.onload = function() {
     loadSettings();
-    updatePlaytimeDisplay();
-    updateStats();
+    const restored = restoreLiveState();
 
-    // Altijd eerst setup scherm tonen
-    document.getElementById('setupScreen').style.display = 'block';
-    document.getElementById('mainContent').style.display = 'none';
-
-    // Schakel knoppen initieel uit
-    toggleButtons(false);
+    if (restored) {
+      $('setupScreen').style.display = 'none';
+      $('mainContent').style.display = 'block';
+    } else {
+      updatePlaytimeDisplay();
+      updateStats();
+      $('setupScreen').style.display = 'block';
+      $('mainContent').style.display = 'none';
+      toggleButtons(false);
+    }
   };
-
-  // Helpers
-  function getTotalShots(c) {
-    return (Number(c.goals) || 0) + (Number(c.attempts) || 0);
-  }
-
-  // Keeper Save% helper (Save% = saves / (saves + GA) * 100)
-  function calcSavePct(c) {
-    const ga = (+c.goalsAgainst)  || 0;  // goals against
-    const sv = (+c.goalsDefended) || 0;  // goals saved
-    const shots = ga + sv;               // shots faced
-    return shots > 0 ? Math.round((sv / shots) * 100) : 0;
-  }
 </script>
 
 </body>
