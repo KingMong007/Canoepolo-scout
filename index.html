@@ -699,10 +699,10 @@
             </div>
             
             <div class="tabs">
-                <div class="tab active" onclick="switchTab('scouting')"aria-label="Scouting"><i class="fas fa-binoculars"></i> Scouting</div>
+                <div class="tab active" onclick="switchTab('scouting')"aria-label="Scouting"><i class="fas fa-binoculars"></i>Scouting</div>
                 <div class="tab" onclick="switchTab('stats')" aria-label="Stats"><i class="fas fa-chart-bar"></i> Stats</div>
-                <div class="tab" onclick="switchTab('scorepanel')"aria-label="Scorepanel"><i class="fas fa-cog"></i> Panel</div>
-                <div class="tab" onclick="switchTab('settings')"aria-label="Settings"><i class="fas fa-cog"></i> Settings</div>
+                <div class="tab" onclick="switchTab('scorepanel')"aria-label="Scorepanel"><i class="fas fa-minus-square"></i>Panel</div>
+                <div class="tab" onclick="switchTab('settings')"aria-label="Settings"><i class="fas fa-cog"></i>Settings</div>
                 
             </div>
             
@@ -710,7 +710,7 @@
                 <!-- Speeltijd sectie -->
                 <div class="playtime-section">
                     <div class="playtime-label">
-                        <i class="fas fa-clock"></i> Effective playing time
+                        <i class="fas fa-clock"></i>Effective playing time
                     </div>
                     <div class="playtime-display" id="playtimeDisplay">00:00</div>
                 </div>
@@ -727,7 +727,7 @@
                         <div class="stat-box">
                             <div class="stat-button">
                                 <button class="stat-btn btn-primary" id="goodPassBtn" onclick="increment('goodPasses')">
-                                    <i class="fas fa-check-circle"></i> Good passes
+                                    <i class="fas fa-check-circle"></i>Good passes
                                     <div class="stat-value" id="goodPasses">0</div>
                                 </button>
                                 <button class="btn btn-grijs btn-small" id="goodPassMinusBtn" onclick="decrement('goodPasses')">-1</button>
@@ -737,7 +737,7 @@
                         <div class="stat-box">
                             <div class="stat-button">
                                 <button class="stat-btn btn-secondary" id="badPassBtn" onclick="increment('badPasses')">
-                                    <i class="fas fa-times-circle"></i> Bad passes
+                                    <i class="fas fa-times-circle"></i>Bad passes
                                     <div class="stat-value" id="badPasses">0</div>
                                 </button>
                                 <button class="btn btn-grijs btn-small" id="badPassMinusBtn" onclick="decrement('badPasses')">-1</button>
@@ -750,7 +750,7 @@
                         <div class="stat-box">
                             <div class="stat-button">
                                 <button class="stat-btn btn-primary" id="assistBtn" onclick="increment('assists')">
-                                    <i class="fas fa-assistive-listening-systems"></i> Assists
+                                    <i class="fas fa-assistive-listening-systems"></i>Assists
                                     <div class="stat-value" id="assists">0</div>
                                 </button>
                                 <button class="btn btn-grijs btn-small" id="assistMinusBtn" onclick="decrement('assists')">-1</button>
@@ -759,7 +759,7 @@
                         <div class="stat-box">
                             <div class="stat-button">
                                 <button class="stat-btn btn-primary" id="interceptionBtn" onclick="increment('interceptions')">
-                                    <i class="fas fa-exchange-alt"></i> Interceptions
+                                    <i class="fas fa-exchange-alt"></i>Interceptions
                                     <div class="stat-value" id="interceptions">0</div>
                                 </button>
                                 <button class="btn btn-grijs btn-small" id="interceptionMinusBtn" onclick="decrement('interceptions')">-1</button>
@@ -772,7 +772,7 @@
                         <div class="stat-box">
                             <div class="stat-button">
                                 <button class="stat-btn btn-primary" id="goalBtn" onclick="increment('goals')">
-                                    <i class="fas fa-bullseye"></i> Goal
+                                    <i class="fas fa-bullseye"></i>Goal
                                     <div class="stat-value" id="goals">0</div>
                                 </button>
                                 <button class="btn btn-grijs btn-small" id="goalMinusBtn" onclick="decrement('goals')">-1</button>
@@ -782,7 +782,7 @@
                         <div class="stat-box">
                             <div class="stat-button">
                                 <button class="stat-btn btn-secondary" id="attemptBtn" onclick="increment('attempts')">
-                                    <i class="fas fa-bullseye"></i> Goal attempt
+                                    <i class="fas fa-bullseye"></i>Goal attempt
                                     <div class="stat-value" id="attempts">0</div>
                                 </button>
                                 <button class="btn btn-grijs btn-small" id="attemptMinusBtn" onclick="decrement('attempts')">-1</button>
@@ -797,7 +797,7 @@
                                 <div class="stat-box">
                                     <div class="stat-button">
                                         <button class="stat-btn btn-primary" id="goalsDefendedBtn" onclick="increment('goalsDefended')">
-                                            <i class="fas fa-shield-alt"></i> Goals defended
+                                            <i class="fas fa-shield-alt"></i>Goals defended
                                             <div class="stat-value" id="goalsDefended">0</div>
                                         </button>
                                         <button class="btn btn-grijs btn-small" id="goalsDefendedMinusBtn" onclick="decrement('goalsDefended')">-1</button>
@@ -807,7 +807,7 @@
                                 <div class="stat-box">
                                     <div class="stat-button">
                                         <button class="stat-btn btn-secondary" id="goalsAgainstBtn" onclick="increment('goalsAgainst')">
-                                            <i class="fas fa-times-circle"></i> Goals against
+                                            <i class="fas fa-times-circle"></i>Goals against
                                             <div class="stat-value" id="goalsAgainst">0</div>
                                         </button>
                                         <button class="btn btn-grijs btn-small" id="goalsAgainstMinusBtn" onclick="decrement('goalsAgainst')">-1</button>
@@ -823,7 +823,7 @@
             </div>
             
             <div id="settings" class="tab-content">
-                <h2><i class="fas fa-cog"></i> App Settings</h2>
+                <h2><i class="fas fa-cog"></i>App Settings</h2>
                 <div class="settings-grid">
 
                      <!-- Dit stuk wordt niet getoond -->
