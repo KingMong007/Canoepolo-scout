@@ -112,40 +112,61 @@ function toggleGoalkeeperButtons() {
 
 // ====== Startscherm ======
 function showSetupScreen() {
-  $('setupScreen').style.display = 'block';
-  $('mainContent').style.display = 'none';
+  const setup = document.getElementById('setupScreen');
+  const main  = document.getElementById('mainContent');
+  if (setup) setup.style.display = 'block';
+  if (main)  main.style.display  = 'none';
 
-  // Prefill uit Settings (Modify-tab)
-  $('setupPlayerName').value   = $('playerName')?.value   || '';
-  $('setupPlayerNumber').value = $('playerNumber')?.value || '';
-  $('setupOwnTeam').value      = $('ownTeam')?.value      || '';
-  $('setupIsGoalkeeper').checked = $('isGoalkeeper')?.checked || false;
+  const copyVal = (fromId, toId) => {
+    const from = document.getElementById(fromId);
+    const to   = document.getElementById(toId);
+    if (from && to) to.value = from.value || '';
+  };
 
-  // Opponent is per match -> altijd leeg op startscherm
-  $('setupOpponent').value = '';
+  copyVal('playerName', 'setupPlayerName');
+  copyVal('playerNumber', 'setupPlayerNumber');
+  copyVal('ownTeam', 'setupOwnTeam');
+
+  const gk = document.getElementById('isGoalkeeper');
+  const gkSetup = document.getElementById('setupIsGoalkeeper');
+  if (gkSetup) gkSetup.checked = !!gk?.checked;
+
+  // Opponent kan ontbreken in HTML -> checken
+  const opp = document.getElementById('setupOpponent');
+  if (opp) opp.value = ''; // altijd leeg bij nieuwe match
 }
 
 
 function saveSetup() {
-  const playerName   = $('setupPlayerName').value.trim();
-  const playerNumber = $('setupPlayerNumber').value.trim();
-  const ownTeam      = $('setupOwnTeam').value.trim();
-  const opponent     = $('setupOpponent').value.trim();
-  const isGK         = $('setupIsGoalkeeper').checked;
+  const getVal = (id) => document.getElementById(id)?.value?.trim() || '';
+  const getChecked = (id) => !!document.getElementById(id)?.checked;
+
+  const playerName   = getVal('setupPlayerName');
+  const playerNumber = getVal('setupPlayerNumber');
+  const ownTeam      = getVal('setupOwnTeam');
+
+  // Opponent is optioneel en kan zelfs ontbreken in de HTML
+  const opponent     = getVal('setupOpponent'); // als het element niet bestaat -> '' (geen crash)
+  const isGK         = getChecked('setupIsGoalkeeper');
 
   if (!playerName || !playerNumber || !ownTeam) {
     alert("Fill in player, number and your team to start scouting!");
     return;
   }
 
-  // Write naar Settings-velden
-  $('playerName').value   = playerName;
-  $('playerNumber').value = playerNumber;
-  $('ownTeam').value      = ownTeam;
-  $('isGoalkeeper').checked = isGK;
+  // Schrijf naar Settings (Modify-tab)
+  const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+  const setChecked = (id, v) => { const el = document.getElementById(id); if (el) el.checked = v; };
 
-  // Opponent blijft enkel in runtime state
-  currentOpponent = opponent;
+  setVal('playerName', playerName);
+  setVal('playerNumber', playerNumber);
+  setVal('ownTeam', ownTeam);
+  setChecked('isGoalkeeper', isGK);
+
+  // Opponent = runtime state (niet in settings opslaan)
+  if (typeof currentOpponent !== 'undefined') {
+    currentOpponent = opponent || '';
+  }
 
   // Persist settings (zonder opponent)
   localStorage.setItem('playerName', playerName);
@@ -153,15 +174,20 @@ function saveSetup() {
   localStorage.setItem('ownTeam', ownTeam);
   localStorage.setItem('isGoalkeeper', isGK);
 
-  updatePlayerInfoCompact();
-  toggleGoalkeeperButtons();
+  updatePlayerInfoCompact?.();
+  toggleGoalkeeperButtons?.();
 
-  $('setupScreen').style.display = 'none';
-  $('mainContent').style.display = 'block';
+  // Scherm wisselen
+  const setup = document.getElementById('setupScreen');
+  const main  = document.getElementById('mainContent');
+  if (setup) setup.style.display = 'block'; // klein trucje: even "aan" houden zodat styles kunnen updaten
+  if (main)  main.style.display  = 'block';
 
-  saveLiveState();
+  // Uiteindelijk het startscherm sluiten:
+  if (setup) setup.style.display = 'none';
+
+  saveLiveState?.();
 }
-
 
 // Handige knop in Settings → General
 // --- PATCH: vervang/bewerk deze functie ---
@@ -345,6 +371,7 @@ function endGame() {
   } finally {
     if (endBtn) endBtn.disabled = false;
   }
+  switchTab('stats'); // ga naar Stats
 }
 
 
@@ -716,17 +743,22 @@ window.onload = function() {
     toggleButtons(false);
     document.getElementById('setupScreen').style.display = 'block';
     document.getElementById('mainContent').style.display = 'none';
+    document.getElementById('startScoutingBtn')?.addEventListener('click', saveSetup);
+
     localStorage.removeItem(FORCE_SETUP_KEY); // vlag opmaken
   } else {
     // doorgaan met de vorige sessie
     document.getElementById('setupScreen').style.display = 'none';
     document.getElementById('mainContent').style.display = 'block';
+    document.getElementById('startScoutingBtn')?.addEventListener('click', saveSetup);
+
   }
 };
 
 
 // ====== Expose voor onclick ======
-window.saveSetup = saveSetup;
+window.saveSetup = saveSetup;           // <— BELANGRIJK
+window.showSetupScreen = showSetupScreen;  // handig als je die ook ergens inline aanroept
 window.resetAndShowSetup = resetAndShowSetup;
 window.savePlayerFromModify = savePlayerFromModify;
 window.toggleGoalkeeperButtons = toggleGoalkeeperButtons;
