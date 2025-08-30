@@ -18,6 +18,8 @@ const counters = {
 };
 
 const LIVE_STATE_KEY = 'liveStateV1';
+const FORCE_SETUP_KEY = 'forceShowSetupV1';   // <--- NIEUW
+
 
 const history = [];
 let playtime = 0; // in seconden
@@ -34,6 +36,16 @@ function hasProgress(){
   if (playtime > 0) return true;
   for (const k in counters){ if (counters[k] > 0) return true; }
   return false;
+}
+
+function stopTimerIfRunning(){
+  if (isPlaying) {
+    isPlaying = false;
+    if (playtimeInterval) {
+      clearInterval(playtimeInterval);
+      playtimeInterval = null;
+    }
+  }
 }
 
 // ====== UI ======
@@ -167,6 +179,57 @@ function resetAndShowSetup(){
       playtimeBtn.classList.add('not-playing');
     }
 
+
+function resetAll(){
+  // stop klok
+  stopTimerIfRunning();
+
+  // counters naar 0 en direct in UI schrijven
+  for (const key in counters) {
+    counters[key] = 0;
+    const el = document.getElementById(key);
+    if (el) el.textContent = '0';
+  }
+
+  // tijd naar 0 en UI verversen
+  playtime = 0;
+  if (typeof updatePlaytimeDisplay === 'function') updatePlaytimeDisplay();
+
+  // historie leeg en stats herberekenen
+  history.length = 0;
+  if (typeof updateStats === 'function') updateStats();
+
+  // play-knop visueel terugzetten
+  const playtimeBtn = document.getElementById('playtimeBtn');
+  if (playtimeBtn) {
+    playtimeBtn.textContent = "Player is in the substitution zone";
+    playtimeBtn.classList.remove('playing');
+    playtimeBtn.classList.add('not-playing');
+  }
+}
+
+function resetAndShowSetup(){
+  // alles resetten
+  resetAll();
+  toggleButtons(false);
+
+  // live state wissen en forceren dat opstart naar setup gaat
+  localStorage.removeItem(LIVE_STATE_KEY);
+  localStorage.setItem(FORCE_SETUP_KEY, '1');
+
+  // schermen togglen
+  const setup = document.getElementById('setupScreen');
+  const main  = document.getElementById('mainContent');
+  if (setup) setup.style.display = 'block';
+  if (main)  main.style.display  = 'none';
+
+  // naar boven
+  window.scrollTo({ top: 0, behavior: 'instant' });
+}
+
+// zorg dat de knop dit kan aanroepen
+window.resetAndShowSetup = resetAndShowSetup;
+
     // Reset counters & tijd en UI
     if (typeof resetAll === 'function') {
       resetAll();               // zet counters op 0 + display bijwerken
@@ -220,53 +283,67 @@ function savePlayerFromModify(){
 // ====== Einde wedstrijd ======
 // --- PATCH: stop klok eerst, dan opslaan ---
 function endGame() {
-  // 1) Stop de effectieve speeltijd meteen als die loopt
-  if (isPlaying) {
-    togglePlaytime(); // stopt interval, zet knop naar "substitution zone", disabled knoppen, saveLiveState()
+  // 0) Voorkom dubbel-klik
+  const endBtn = $('endGameBtn');
+  if (endBtn) endBtn.disabled = true;
+
+  try {
+    // 1) Stop de klok & UI meteen
+    if (isPlaying) {
+      togglePlaytime(); // stopt interval + disabled knoppen
+    } else {
+      // was al gestopt: knoppen alsnog uitzetten
+      toggleButtons(false);
+    }
+
+    // 2) Read current player data
+    const playerName   = $('playerName')?.value || '';
+    const playerNumber = $('playerNumber')?.value || '';
+    const ownTeam      = $('ownTeam')?.value || '';
+    const opponent     = $('opponent')?.value || '';
+    if (!playerName) { alert("Please enter the player's name!"); return; }
+
+    // 3) Sync UI één keer zodat tijd definitief is
+    updatePlaytimeDisplay();
+
+    // 4) Stats berekenen op de gestopte tijd
+    const totalPasses   = (counters.goodPasses || 0) + (counters.badPasses || 0);
+    const passAccuracy  = totalPasses > 0 ? Math.round((counters.goodPasses / totalPasses) * 100) : 0;
+    const totalShots    = getTotalShots(counters);
+    const shotAccuracy  = totalShots > 0 ? Math.round((counters.goals / totalShots) * 100) : 0;
+    const savePct       = calcSavePct(counters);
+    const minutesPlayed = playtime / 60;
+    const involvement   = minutesPlayed > 0
+      ? involvementPerMinute(counters, minutesPlayed, { passesIncludeAssists: true })
+      : 0.0;
+
+    // 5) Scouting opslaan
+    const scouting = {
+      id: Date.now(),
+      date: new Date().toLocaleString('nl-NL'),
+      playerName, playerNumber, ownTeam, opponent,
+      playtime, isGoalkeeper,
+      stats: { ...counters },
+      totals: { totalPasses, passAccuracy, shotAccuracy, involvement, savePct }
+    };
+
+    savedScoutings.push(scouting);
+    localStorage.setItem('savedScoutings', JSON.stringify(savedScoutings));
+    updateScoutingsList();
+
+    alert(`Game of ${playerName} is saved!`);
+
+    // 6) Reset & live state wissen
+    resetAll();
+    localStorage.removeItem(LIVE_STATE_KEY);
+
+    // (Optioneel) Wil je direct naar het startscherm?
+    // resetAndShowSetup();
+  } finally {
+    // 7) Button weer klikbaar (als je niet naar startscherm navigeert)
+    if (endBtn) endBtn.disabled = false;
   }
-
-  const playerName   = $('playerName')?.value || '';
-  const playerNumber = $('playerNumber')?.value || '';
-  const ownTeam      = $('ownTeam')?.value || '';
-  const opponent     = $('opponent')?.value || '';
-
-  if (!playerName) { alert("Please enter the player's name!"); return; }
-
-  // (optioneel) 2) Sync de UI nog 1 keer
-  updatePlaytimeDisplay();
-
-  // 3) Statistieken berekenen met de definitief gestopte tijd
-  const totalPasses = (counters.goodPasses || 0) + (counters.badPasses || 0);
-  const passAccuracy = totalPasses > 0 ? Math.round((counters.goodPasses / totalPasses) * 100) : 0;
-
-  const totalShots = getTotalShots(counters);
-  const shotAccuracy = totalShots > 0 ? Math.round((counters.goals / totalShots) * 100) : 0;
-
-  const savePct = calcSavePct(counters);
-  const minutesPlayed = playtime / 60;
-  const involvement = minutesPlayed > 0
-    ? involvementPerMinute(counters, minutesPlayed, { passesIncludeAssists: true }) : 0.0;
-
-  const scouting = {
-    id: Date.now(),
-    date: new Date().toLocaleString('nl-NL'),
-    playerName, playerNumber, ownTeam, opponent,
-    playtime, isGoalkeeper,
-    stats: { ...counters },
-    totals: { totalPasses, passAccuracy, shotAccuracy, involvement, savePct }
-  };
-
-  savedScoutings.push(scouting);
-  localStorage.setItem('savedScoutings', JSON.stringify(savedScoutings));
-
-  updateScoutingsList();
-  alert(`Game of ${playerName} is saved!`);
-
-  // 4) Reset na bewaren
-  resetAll();
-  localStorage.removeItem(LIVE_STATE_KEY);
 }
-
 
 // ====== Metrics ======
 function involvementPerMinute(counters, minutesPlayed, { passesIncludeAssists = true } = {}) {
@@ -609,21 +686,33 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveL
 // ====== Init ======
 window.onload = function() {
   loadSettings();
-  const restored = restoreLiveState();
 
-  // Startscherm altijd bereikbaar: als niets te herstellen, toon startscherm
-  if (!restored) {
-    updatePlaytimeDisplay();
-    updateStats();
-    $('setupScreen').style.display = 'block';
-    $('mainContent').style.display = 'none';
+  const forceSetup = localStorage.getItem(FORCE_SETUP_KEY) === '1';
+  const hasProfile =
+    !!(localStorage.getItem('playerName') &&
+       localStorage.getItem('playerNumber') &&
+       localStorage.getItem('ownTeam') &&
+       localStorage.getItem('opponent'));
+
+  let restored = false;
+  if (!forceSetup && hasProfile) {
+    restored = restoreLiveState(); // alleen proberen te herstellen als er echt een profiel is
+  }
+
+  if (forceSetup || !hasProfile || !restored) {
+    // verse start
+    resetAll();
     toggleButtons(false);
+    document.getElementById('setupScreen').style.display = 'block';
+    document.getElementById('mainContent').style.display = 'none';
+    localStorage.removeItem(FORCE_SETUP_KEY); // vlag opmaken
   } else {
-    // Herstel vorige sessie
-    $('setupScreen').style.display = 'none';
-    $('mainContent').style.display = 'block';
+    // doorgaan met de vorige sessie
+    document.getElementById('setupScreen').style.display = 'none';
+    document.getElementById('mainContent').style.display = 'block';
   }
 };
+
 
 // ====== Expose voor onclick ======
 window.saveSetup = saveSetup;
