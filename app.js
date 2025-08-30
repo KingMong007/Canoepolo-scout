@@ -19,7 +19,7 @@ const counters = {
 
 const LIVE_STATE_KEY = 'liveStateV1';
 const FORCE_SETUP_KEY = 'forceShowSetupV1';   // <--- NIEUW
-
+let currentOpponent = ''; // opponent hoort niet bij Settings; per match
 
 const history = [];
 let playtime = 0; // in seconden
@@ -50,25 +50,25 @@ function stopTimerIfRunning(){
 
 // ====== UI ======
 function updatePlayerInfoCompact() {
-  const playerName = $('playerName')?.value || '';
+  const playerName   = $('playerName')?.value || '';
   const playerNumber = $('playerNumber')?.value || '';
-  const ownTeam = $('ownTeam')?.value || '';
-  const opponent = $('opponent')?.value || '';
+  const ownTeam      = $('ownTeam')?.value || '';
+  const opp          = currentOpponent || '';
 
-  let infoText = "";
+  let infoText = '';
   if (playerName) {
-    infoText += `${playerName}`;
+    infoText += playerName;
     if (playerNumber) infoText += ` (#${playerNumber})`;
   }
   if (ownTeam) {
-    if (infoText) infoText += " | ";
-    infoText += `${ownTeam}`;
+    if (infoText) infoText += ' | ';
+    infoText += ownTeam;
   }
-  if (opponent) {
-    if (infoText) infoText += " vs ";
-    infoText += `${opponent}`;
+  if (opp) {
+    if (infoText) infoText += ' vs ';
+    infoText += opp;
   }
-  $('playerInfoCompact').textContent = infoText || "No player information";
+  $('playerInfoCompact').textContent = infoText || 'No player information';
 }
 
 function toggleButtons(enabled) {
@@ -115,13 +115,16 @@ function showSetupScreen() {
   $('setupScreen').style.display = 'block';
   $('mainContent').style.display = 'none';
 
-  // Prefill vanuit Modify-tab
-  $('setupPlayerName').value   = $('playerName')?.value || '';
+  // Prefill uit Settings (Modify-tab)
+  $('setupPlayerName').value   = $('playerName')?.value   || '';
   $('setupPlayerNumber').value = $('playerNumber')?.value || '';
-  $('setupOwnTeam').value      = $('ownTeam')?.value || '';
-  $('setupOpponent').value     = $('opponent')?.value || '';
+  $('setupOwnTeam').value      = $('ownTeam')?.value      || '';
   $('setupIsGoalkeeper').checked = $('isGoalkeeper')?.checked || false;
+
+  // Opponent is per match -> altijd leeg op startscherm
+  $('setupOpponent').value = '';
 }
+
 
 function saveSetup() {
   const playerName   = $('setupPlayerName').value.trim();
@@ -130,23 +133,24 @@ function saveSetup() {
   const opponent     = $('setupOpponent').value.trim();
   const isGK         = $('setupIsGoalkeeper').checked;
 
-  if (!playerName || !playerNumber || !ownTeam || !opponent) {
-    alert("Fill in all fields to start scouting!");
+  if (!playerName || !playerNumber || !ownTeam) {
+    alert("Fill in player, number and your team to start scouting!");
     return;
   }
 
-  // Schrijf naar Modify-tab velden
+  // Write naar Settings-velden
   $('playerName').value   = playerName;
   $('playerNumber').value = playerNumber;
   $('ownTeam').value      = ownTeam;
-  $('opponent').value     = opponent;
   $('isGoalkeeper').checked = isGK;
 
-  // Persist
+  // Opponent blijft enkel in runtime state
+  currentOpponent = opponent;
+
+  // Persist settings (zonder opponent)
   localStorage.setItem('playerName', playerName);
   localStorage.setItem('playerNumber', playerNumber);
   localStorage.setItem('ownTeam', ownTeam);
-  localStorage.setItem('opponent', opponent);
   localStorage.setItem('isGoalkeeper', isGK);
 
   updatePlayerInfoCompact();
@@ -158,26 +162,27 @@ function saveSetup() {
   saveLiveState();
 }
 
+
 // Handige knop in Settings → General
 // --- PATCH: vervang/bewerk deze functie ---
 function resetAndShowSetup(){
-  try {
-    // Stop timer netjes
-    if (isPlaying) {
-      isPlaying = false;
-      if (playtimeInterval) {
-        clearInterval(playtimeInterval);
-        playtimeInterval = null;
-      }
-    }
+  resetAll();
+  toggleButtons(false);
+  localStorage.removeItem(LIVE_STATE_KEY);
+  localStorage.setItem(FORCE_SETUP_KEY, '1');
 
-    // Zet play-knop terug naar "wisselzone"
-    const playtimeBtn = document.getElementById('playtimeBtn');
-    if (playtimeBtn) {
-      playtimeBtn.textContent = "Player is in the substitution zone";
-      playtimeBtn.classList.remove('playing');
-      playtimeBtn.classList.add('not-playing');
-    }
+  currentOpponent = '';                 // <--- opponent leeg
+  updatePlayerInfoCompact();
+
+  const setup = $('setupScreen');
+  const main  = $('mainContent');
+  if (setup) setup.style.display = 'block';
+  if (main)  main.style.display  = 'none';
+  if ($('setupOpponent')) $('setupOpponent').value = ''; // startscherm leeg
+
+  window.scrollTo({ top: 0, behavior: 'instant' });
+}
+
 
 
 function resetAll(){
@@ -265,13 +270,11 @@ function savePlayerFromModify(){
   const playerName   = $('playerName').value.trim();
   const playerNumber = $('playerNumber').value.trim();
   const ownTeam      = $('ownTeam').value.trim();
-  const opponent     = $('opponent').value.trim();
   const isGK         = $('isGoalkeeper').checked;
 
   localStorage.setItem('playerName', playerName);
   localStorage.setItem('playerNumber', playerNumber);
   localStorage.setItem('ownTeam', ownTeam);
-  localStorage.setItem('opponent', opponent);
   localStorage.setItem('isGoalkeeper', isGK);
 
   updatePlayerInfoCompact();
@@ -280,36 +283,36 @@ function savePlayerFromModify(){
   saveLiveState();
 }
 
+
 // ====== Einde wedstrijd ======
 // --- PATCH: stop klok eerst, dan opslaan ---
 function endGame() {
-  // 0) Voorkom dubbel-klik
+  // Bevestiging
+  const ok = confirm("End match and save the scouting?");
+  if (!ok) return;
+
   const endBtn = $('endGameBtn');
   if (endBtn) endBtn.disabled = true;
 
   try {
-    // 1) Stop de klok & UI meteen
+    // Stop klok/knoppen
     if (isPlaying) {
-      togglePlaytime(); // stopt interval + disabled knoppen
+      togglePlaytime();
     } else {
-      // was al gestopt: knoppen alsnog uitzetten
       toggleButtons(false);
     }
 
-    // 2) Read current player data
     const playerName   = $('playerName')?.value || '';
     const playerNumber = $('playerNumber')?.value || '';
     const ownTeam      = $('ownTeam')?.value || '';
-    const opponent     = $('opponent')?.value || '';
+
     if (!playerName) { alert("Please enter the player's name!"); return; }
 
-    // 3) Sync UI één keer zodat tijd definitief is
-    updatePlaytimeDisplay();
+    updatePlaytimeDisplay(); // final tick
 
-    // 4) Stats berekenen op de gestopte tijd
     const totalPasses   = (counters.goodPasses || 0) + (counters.badPasses || 0);
     const passAccuracy  = totalPasses > 0 ? Math.round((counters.goodPasses / totalPasses) * 100) : 0;
-    const totalShots    = getTotalShots(counters);
+    const totalShots    = (counters.goals || 0) + (counters.attempts || 0);
     const shotAccuracy  = totalShots > 0 ? Math.round((counters.goals / totalShots) * 100) : 0;
     const savePct       = calcSavePct(counters);
     const minutesPlayed = playtime / 60;
@@ -317,11 +320,11 @@ function endGame() {
       ? involvementPerMinute(counters, minutesPlayed, { passesIncludeAssists: true })
       : 0.0;
 
-    // 5) Scouting opslaan
     const scouting = {
       id: Date.now(),
       date: new Date().toLocaleString('nl-NL'),
-      playerName, playerNumber, ownTeam, opponent,
+      playerName, playerNumber, ownTeam,
+      opponent: currentOpponent,                 // <-- uit state
       playtime, isGoalkeeper,
       stats: { ...counters },
       totals: { totalPasses, passAccuracy, shotAccuracy, involvement, savePct }
@@ -333,17 +336,17 @@ function endGame() {
 
     alert(`Game of ${playerName} is saved!`);
 
-    // 6) Reset & live state wissen
+    // Direct naar Stats tab
+    switchTab('stats');
+
+    // Reset voor nieuwe match
     resetAll();
     localStorage.removeItem(LIVE_STATE_KEY);
-
-    // (Optioneel) Wil je direct naar het startscherm?
-    // resetAndShowSetup();
   } finally {
-    // 7) Button weer klikbaar (als je niet naar startscherm navigeert)
     if (endBtn) endBtn.disabled = false;
   }
 }
+
 
 // ====== Metrics ======
 function involvementPerMinute(counters, minutesPlayed, { passesIncludeAssists = true } = {}) {
@@ -460,7 +463,6 @@ function loadSettings() {
   const playerName = localStorage.getItem('playerName') || '';
   const playerNumber = localStorage.getItem('playerNumber') || '';
   const ownTeam = localStorage.getItem('ownTeam') || '';
-  const opponent = localStorage.getItem('opponent') || '';
   const halfDuration = localStorage.getItem('halfDuration') || '';
   const numberOfHalves = localStorage.getItem('numberOfHalves') || '';
   const isGoalkeeperSetting = localStorage.getItem('isGoalkeeper');
@@ -468,16 +470,19 @@ function loadSettings() {
   if ($('playerName'))   $('playerName').value   = playerName;
   if ($('playerNumber')) $('playerNumber').value = playerNumber;
   if ($('ownTeam'))      $('ownTeam').value      = ownTeam;
-  if ($('opponent'))     $('opponent').value     = opponent;
 
   if (halfDuration && $('halfDuration')) $('halfDuration').value = halfDuration;
   if (numberOfHalves && $('numberOfHalves')) $('numberOfHalves').value = numberOfHalves;
 
-  if (typeof isGoalkeeperSetting === 'string'){
+  if (typeof isGoalkeeperSetting === 'string') {
     if ($('isGoalkeeper')) $('isGoalkeeper').checked = (isGoalkeeperSetting === 'true');
     isGoalkeeper = (isGoalkeeperSetting === 'true');
     toggleGoalkeeperButtons();
   }
+
+  // Opponent komt niet uit settings
+  currentOpponent = '';
+  if ($('setupOpponent')) $('setupOpponent').value = '';
 
   const scoutings = localStorage.getItem('savedScoutings');
   if (scoutings) { savedScoutings = JSON.parse(scoutings); updateScoutingsList(); }
@@ -621,10 +626,12 @@ function saveLiveState() {
     playtime,
     isPlaying,
     lastTick: Date.now(),
-    isGoalkeeper: $('isGoalkeeper')?.checked || false
+    isGoalkeeper: $('isGoalkeeper')?.checked || false,
+    opponent: currentOpponent            // <--- NIEUW
   };
   localStorage.setItem(LIVE_STATE_KEY, JSON.stringify(state));
 }
+
 
 /** @returns {boolean} true als er state is hersteld */
 function restoreLiveState() {
@@ -636,6 +643,8 @@ function restoreLiveState() {
     Object.assign(counters, s.counters || {});
     playtime   = Number(s.playtime) || 0;
     isPlaying  = !!s.isPlaying;
+
+    if (typeof s.opponent === 'string') currentOpponent = s.opponent; // <--- NIEUW
 
     if (isPlaying && s.lastTick) {
       const delta = Math.max(0, Math.floor((Date.now() - s.lastTick) / 1000));
@@ -650,6 +659,7 @@ function restoreLiveState() {
 
     for (const k in counters) updateDisplay(k);
     updatePlaytimeDisplay();
+    updatePlayerInfoCompact();
 
     if (isPlaying) {
       clearInterval(playtimeInterval);
@@ -672,6 +682,7 @@ function restoreLiveState() {
     return false;
   }
 }
+
 
 // Verlaat/achtergrond
 window.addEventListener('beforeunload', (e) => {
