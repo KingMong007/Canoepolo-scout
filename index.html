@@ -14,28 +14,28 @@
   <title>Canoepolo Scouting App</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
   <link rel="stylesheet" href="style.css"/>
-  <!-- HIER: jouw app.js met cache-bust -->
-  <script defer src="app.js?v=20250830b"></script>
 
+  <!-- App-script met cache-bust -->
+  <script defer src="app.js?v=20250830c"></script>
 </head>
 
 <body>
   <div class="container">
-   <header class="site-header">
-  <div class="header-left">
-    <img src="rectusoft.png" alt="Rectusoft" class="brand-logo">
-  </div>
+    <header class="site-header">
+      <div class="header-left">
+        <img src="rectusoft.png" alt="Rectusoft" class="brand-logo"/>
+      </div>
 
-  <!-- NIEUW: CTA-knop -->
-  <button class="header-cta" onclick="resetAndShowSetup()">
-    <i class="fas fa-rotate-left"></i> New game
-  </button>
+      <!-- CTA: New game -->
+      <button class="header-cta" onclick="resetAndShowSetup()">
+        <i class="fas fa-rotate-left"></i> New game
+      </button>
 
-  <div class="brand-copy">
-    <div class="logo"><span>Canoepolo Scouting</span></div>
-    <p>Track results of players</p>
-  </div>
-</header>
+      <div class="brand-copy">
+        <div class="logo"><span>Canoepolo Scouting</span></div>
+        <p>Track results of players</p>
+      </div>
+    </header>
 
     <!-- Startscherm -->
     <div id="setupScreen" class="setup-screen">
@@ -62,10 +62,9 @@
           <label for="setupIsGoalkeeper">Is this player a goalkeeper?</label>
         </div>
       </div>
-          <button id="startScoutingBtn" type="button" class="btn btn-success btn-large" onclick="saveSetup()">
-  Start Scouting
-</button>
-
+      <button id="startScoutingBtn" type="button" class="btn btn-success btn-large" onclick="saveSetup()">
+        Start Scouting
+      </button>
     </div>
 
     <!-- Hoofdcontent -->
@@ -74,7 +73,7 @@
         <div class="player-info-compact" id="playerInfoCompact"></div>
       </div>
 
-      <!-- Hoofd-tabs -->
+      <!-- Tabs -->
       <div class="tabs">
         <div class="tab active" onclick="switchTab('scouting')" aria-label="Scouting">
           <i class="fas fa-binoculars"></i> Scouting
@@ -282,10 +281,7 @@
                 <label for="ownTeam">Your team name</label>
                 <input type="text" id="ownTeam" placeholder="Jouw team naam"/>
               </div>
-              <div class="input-group">
-                <label for="opponent">Opponent</label>
-                <input type="text" id="opponent" placeholder="Tegenstander team"/>
-              </div>
+              <!-- Opponent bewust niet meer hier -->
             </div>
           </div>
 
@@ -344,92 +340,5 @@
 
     </div>
   </div>
-  <script>
-/* ==== HOTFIX: Start Scouting & New game betrouwbaar maken ==== */
-(function(){
-  'use strict';
-  const $ = (id) => document.getElementById(id);
-
-  // Veilige save die niet crasht als elementen ontbreken
-  function safeSaveSetup(){
-    const getVal = (id) => $(id)?.value?.trim() || '';
-    const getChecked = (id) => !!$(id)?.checked;
-
-    const playerName   = getVal('setupPlayerName');
-    const playerNumber = getVal('setupPlayerNumber');
-    const ownTeam      = getVal('setupOwnTeam');
-    const opponent     = getVal('setupOpponent'); // mag ontbreken
-    const isGK         = getChecked('setupIsGoalkeeper');
-
-    if (!playerName || !playerNumber || !ownTeam){
-      alert("Fill in player, number and your team to start scouting!");
-      return;
-    }
-
-    // Schrijf naar Modify/Settings-velden (als die bestaan)
-    if ($('playerName'))   $('playerName').value   = playerName;
-    if ($('playerNumber')) $('playerNumber').value = playerNumber;
-    if ($('ownTeam'))      $('ownTeam').value      = ownTeam;
-    if ($('isGoalkeeper')) $('isGoalkeeper').checked = isGK;
-
-    // Opponent = runtime (niet in settings bewaren)
-    window.currentOpponent = opponent || '';
-
-    // UI helpers aanroepen als ze bestaan
-    try { typeof updatePlayerInfoCompact === 'function' && updatePlayerInfoCompact(); } catch(e){}
-    try { typeof toggleGoalkeeperButtons === 'function' && toggleGoalkeeperButtons(); } catch(e){}
-    try { typeof saveLiveState === 'function' && saveLiveState(); } catch(e){}
-
-    // Scherm wisselen
-    if ($('setupScreen')) $('setupScreen').style.display = 'none';
-    if ($('mainContent')) $('mainContent').style.display = 'block';
-  }
-
-  // Als er al een eigen saveSetup is, gebruik die; anders onze veilige
-  function onStartScoutingClick(e){
-    if (typeof window.saveSetup === 'function'){
-      try { return window.saveSetup(); } catch(err){ console.error(err); }
-    }
-    return safeSaveSetup();
-  }
-
-  // “New game” fallback (toont startscherm en reset basis)
-  function onNewGameClick(){
-    if (typeof window.resetAndShowSetup === 'function'){
-      try { return window.resetAndShowSetup(); } catch(err){ console.error(err); }
-    }
-    // Fallback reset
-    if ($('mainContent')) $('mainContent').style.display = 'none';
-    if ($('setupScreen')) $('setupScreen').style.display = 'block';
-    ['goodPasses','badPasses','assists','interceptions','goals','attempts','goalsAgainst','goalsDefended']
-      .forEach(id => { const el=$(id); if(el) el.textContent='0'; });
-    if ($('playtimeDisplay')) $('playtimeDisplay').textContent = '00:00';
-    window.currentOpponent = '';
-  }
-
-  // Wire knoppen zodra DOM er is
-  function wireUI(){
-    const startBtn = $('startScoutingBtn') || document.querySelector('[onclick*="saveSetup"]');
-    startBtn?.addEventListener('click', onStartScoutingClick);
-
-    const newGameBtn = document.querySelector('.header-cta');
-    newGameBtn?.addEventListener('click', onNewGameClick);
-
-    // Maak onze veilige versie ook globaal beschikbaar als saveSetup ontbreekt
-    if (typeof window.saveSetup !== 'function') {
-      window.saveSetup = safeSaveSetup;
-    }
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', wireUI);
-  } else {
-    wireUI();
-  }
-
-  console.log('[Hotfix] UI wired');
-})();
-</script>
-
 </body>
 </html>
