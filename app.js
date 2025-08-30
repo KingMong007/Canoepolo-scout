@@ -755,6 +755,94 @@ window.onload = function() {
   }
 };
 
+/* ==== HOTFIX: Start Scouting altijd laten werken ==== */
+(function(){
+  'use strict';
+
+  const $ = (id) => document.getElementById(id);
+
+  // Robuuste saveSetup (null-safe, opponent optioneel)
+  function saveSetup(){
+    const getVal = (id) => $(id)?.value?.trim() || '';
+    const getChecked = (id) => !!$(id)?.checked;
+
+    const playerName   = getVal('setupPlayerName');
+    const playerNumber = getVal('setupPlayerNumber');
+    const ownTeam      = getVal('setupOwnTeam');
+    const opponent     = getVal('setupOpponent'); // veld mag ontbreken → ''
+    const isGK         = getChecked('setupIsGoalkeeper');
+
+    if (!playerName || !playerNumber || !ownTeam){
+      alert("Fill in player, number and your team to start scouting!");
+      return;
+    }
+
+    // Schrijf naar Modify/Settings-velden (als ze bestaan)
+    if ($('playerName'))   $('playerName').value   = playerName;
+    if ($('playerNumber')) $('playerNumber').value = playerNumber;
+    if ($('ownTeam'))      $('ownTeam').value      = ownTeam;
+    if ($('isGoalkeeper')) $('isGoalkeeper').checked = isGK;
+
+    // Opponent = runtime (niet in settings bewaren)
+    try { window.currentOpponent = opponent || ''; } catch(e){}
+
+    // Persist settings (zonder opponent)
+    try {
+      localStorage.setItem('playerName', playerName);
+      localStorage.setItem('playerNumber', playerNumber);
+      localStorage.setItem('ownTeam', ownTeam);
+      localStorage.setItem('isGoalkeeper', isGK);
+    } catch(e){ console.warn('localStorage save failed', e); }
+
+    // UI bijwerken als functies bestaan
+    try { typeof updatePlayerInfoCompact === 'function' && updatePlayerInfoCompact(); } catch(e){}
+    try { typeof toggleGoalkeeperButtons === 'function' && toggleGoalkeeperButtons(); } catch(e){}
+
+    // Scherm wisselen
+    if ($('setupScreen')) $('setupScreen').style.display = 'none';
+    if ($('mainContent')) $('mainContent').style.display = 'block';
+
+    try { typeof saveLiveState === 'function' && saveLiveState(); } catch(e){}
+  }
+
+  // Globaal maken voor inline onclick="saveSetup()"
+  window.saveSetup = saveSetup;
+
+  // Extra safety: ook via addEventListener binden
+  function wireStartButton(){
+    const btn = $('startScoutingBtn') || document.querySelector('[onclick*="saveSetup"]');
+    if (btn) {
+      btn.addEventListener('click', saveSetup);
+      console.log('[App] Start Scouting wired');
+    } else {
+      console.warn('[App] Start Scouting button not found');
+    }
+  }
+
+  // ShowSetup: vul vanuit settings, opponent leeg
+  function showSetupScreenSafe(){
+    if ($('setupScreen')) $('setupScreen').style.display = 'block';
+    if ($('mainContent')) $('mainContent').style.display = 'none';
+
+    const copy = (fromId, toId) => { if ($(fromId) && $(toId)) $(toId).value = $(fromId).value || ''; };
+    copy('playerName',   'setupPlayerName');
+    copy('playerNumber', 'setupPlayerNumber');
+    copy('ownTeam',      'setupOwnTeam');
+    if ($('setupIsGoalkeeper') && $('isGoalkeeper')) $('setupIsGoalkeeper').checked = !!$('isGoalkeeper').checked;
+    if ($('setupOpponent')) $('setupOpponent').value = ''; // per match leeg
+  }
+  // optioneel globaal maken
+  window.showSetupScreen = window.showSetupScreen || showSetupScreenSafe;
+
+  // Wire zodra DOM klaar is (defer garandeert dat dit nog op tijd is)
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', wireStartButton);
+  } else {
+    wireStartButton();
+  }
+
+  console.log('[App] hotfix loaded');
+})();
 
 // ====== Expose voor onclick ======
 window.saveSetup = saveSetup;           // <— BELANGRIJK
