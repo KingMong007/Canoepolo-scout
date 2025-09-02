@@ -16,7 +16,7 @@
   <link rel="stylesheet" href="style.css"/>
 
   <!-- App-script met cache-bust -->
-  <script defer src="app.js?v=20250830d"></script>
+  <script defer src="app.js?v=20250902a"></script>
 </head>
 
 <body>
@@ -82,7 +82,7 @@
           <i class="fas fa-chart-bar"></i> Stats
         </div>
         <div class="tab" onclick="switchTab('scorepanel')" aria-label="Scorepanel">
-          <i class="fas fa-minus-square"></i> Panel
+          <i class="fas fa-stopwatch"></i> Scorepanel
         </div>
         <div class="tab" onclick="switchTab('settings')" aria-label="Settings">
           <i class="fas fa-cog"></i> Settings
@@ -227,7 +227,32 @@
 
               <div class="input-group">
                 <label for="halfDuration">Duration of a half (minutes)</label>
-                <input type="number" id="halfDuration" value="10"/>
+                <input type="number" id="halfDuration" value="10" min="1" max="60"/>
+              </div>
+
+              <div class="input-group">
+                <label for="restDuration">Rest between halves (minutes)</label>
+                <input type="number" id="restDuration" value="3" min="0" max="30"/>
+              </div>
+
+              <div class="input-group">
+                <label for="shotClock">Shot clock (seconds)</label>
+                <input type="number" id="shotClock" value="60" min="1" max="999"/>
+              </div>
+
+              <div class="input-group">
+                <label for="shotWarnSec">Shot warning at (seconds remaining)</label>
+                <input type="number" id="shotWarnSec" value="20" min="1" max="998"/>
+              </div>
+
+              <div class="checkbox-group">
+                <input type="checkbox" id="shotVibrate" checked/>
+                <label for="shotVibrate">Vibrate (if supported)</label>
+              </div>
+
+              <div class="input-group">
+                <label for="shotVolume">Signal volume</label>
+                <input type="range" id="shotVolume" min="0" max="100" value="60"/>
               </div>
 
               <div class="input-group">
@@ -281,7 +306,6 @@
                 <label for="ownTeam">Your team name</label>
                 <input type="text" id="ownTeam" placeholder="Jouw team naam"/>
               </div>
-              <!-- Opponent bewust niet meer hier -->
             </div>
           </div>
 
@@ -292,10 +316,133 @@
       </div>
 
       <!-- Scorepanel -->
-      <div id="scorepanel" class="tab-content">
-        <h2>Score panel and resetclock</h2>
-        <h2><i class="fas fa-person-digging"></i> Under construction</h2>
+     <div id="scorepanel" class="tab-content">
+  <!-- SCOREBORD -->
+  <div id="tab-scoreboard" class="sb-wrapper">
+
+    <header class="sb-header">
+      <h2>Scorebord</h2>
+      <div class="sb-actions">
+        <button id="sb-settings-open" class="sb-btn tertiary" title="Instellingen">⚙</button>
+        <button id="sb-fullscreen" class="sb-btn tertiary" title="Volledig scherm">⛶</button>
+        <button id="sb-new-game" class="sb-btn danger" title="Nieuwe wedstrijd">Nieuwe wedstrijd</button>
       </div>
+    </header>
+
+    <div class="sb-grid">
+      <!-- TEAM LINKS -->
+      <div class="sb-team" data-team="home">
+        <input id="sb-home-name" class="sb-team-name" value="Thuis" maxlength="18"/>
+        <div class="sb-score" id="sb-home-score">0</div>
+        <div class="sb-score-ctrls">
+          <button class="sb-btn" data-score="home" data-delta="1">+1</button>
+          <button class="sb-btn ghost" data-score="home" data-delta="-1">−1</button>
+        </div>
+      </div>
+
+      <!-- MIDDEN: TIMERS & CONTROLS -->
+      <div class="sb-center">
+        <!-- WEDSTRIJDKLOK -->
+        <div class="sb-box">
+          <div class="sb-row between">
+            <div class="sb-col">
+              <div class="sb-label">Fase</div>
+              <div id="sb-phase" class="sb-phase">Vooraf</div>
+            </div>
+            <div class="sb-col">
+              <div class="sb-label">Periode</div>
+              <div id="sb-period" class="sb-period-val">1</div>
+            </div>
+          </div>
+          <div id="sb-game-time" class="sb-game-time">10:00</div>
+          <div class="sb-ctrls">
+            <button class="sb-btn primary" id="sb-game-toggle">Start / Pauze (Spatie)</button>
+            <button class="sb-btn" id="sb-game-reset">Reset periode</button>
+            <button class="sb-btn" id="sb-next-phase">Volgende fase</button>
+          </div>
+        </div>
+
+        <!-- SHOTKLOK -->
+        <div class="sb-shot sb-box">
+          <div class="sb-row between">
+            <div class="sb-label">Shotklok</div>
+            <div class="sb-help-mini">Waarschuwing bij <span id="sb-warn-at">20</span>s</div>
+          </div>
+          <div id="sb-shot-time" class="sb-shot-time">60</div>
+         <div class="sb-shot-ctrls">
+          <button class="sb-btn primary" id="sb-shot-start" disabled>Start / Pauze (S)</button>
+          <button class="sb-btn sb-btn--xl" id="sb-shot-reset">RESET (R)</button>
+          <label class="sb-custom">
+          <!--  <input id="sb-shot-custom" type="number" min="1" max="999" value="60" />
+            <button class="sb-btn" id="sb-shot-set">Set</button>
+          </label>-->
+        </div>  
+
+          <div class="sb-note">Shotklok pauzeert automatisch wanneer de wedstrijdtijd pauzeert.</div>
+        </div>
+      </div>
+
+      <!-- TEAM RECHTS -->
+      <div class="sb-team" data-team="away">
+        <input id="sb-away-name" class="sb-team-name" value="Uit" maxlength="18"/>
+        <div class="sb-score" id="sb-away-score">0</div>
+        <div class="sb-score-ctrls">
+          <button class="sb-btn" data-score="away" data-delta="1">+1</button>
+          <button class="sb-btn ghost" data-score="away" data-delta="-1">−1</button>
+        </div>
+      </div>
+    </div>
+
+    <footer class="sb-footer">
+      <div class="sb-help">
+        <strong>Sneltoetsen:</strong> Spatie = wedstrijd Start/Pauze • S = shotklok Start/Pauze • R = reset shotklok • N = volgende fase • H/A = +1 (Shift = −1)
+      </div>
+    </footer>
+  </div>
+
+  <!-- INSTELLINGEN MODAL (scorebord) -->
+  <dialog id="sb-settings" class="sb-modal">
+    <form method="dialog" class="sb-modal-inner">
+      <header class="sb-modal-header">
+        <h3>Instellingen</h3>
+        <button class="sb-btn ghost" id="sb-settings-close" value="cancel" aria-label="Sluit">✕</button>
+      </header>
+
+      <div class="sb-form-grid">
+        <label>
+          <span>Speeltijd per helft (min)</span>
+          <input type="number" id="cfg-half-min" min="1" max="60" value="10">
+        </label>
+        <label>
+          <span>Rusttijd tussen helften (min)</span>
+          <input type="number" id="cfg-halftime-min" min="0" max="30" value="3">
+        </label>
+        <label>
+          <span>Shotklok (s)</span>
+          <input type="number" id="cfg-shot-sec" min="1" max="999" value="60">
+        </label>
+        <label>
+          <span>Shot waarschuwing bij (s resterend)</span>
+          <input type="number" id="cfg-warn-sec" min="1" max="998" value="20">
+        </label>
+        <label class="sb-row between">
+          <span>Trillen (indien ondersteund)</span>
+          <input type="checkbox" id="cfg-vibrate" checked>
+        </label>
+        <label>
+          <span>Volume signaal</span>
+          <input type="range" id="cfg-volume" min="0" max="100" value="60">
+        </label>
+      </div>
+
+      <footer class="sb-modal-footer">
+        <button class="sb-btn" id="cfg-save">Bewaar</button>
+        <button class="sb-btn ghost" value="cancel">Annuleer</button>
+      </footer>
+    </form>
+  </dialog>
+</div>
+
 
       <!-- Stats -->
       <div id="stats" class="tab-content">
@@ -328,7 +475,6 @@
         <div class="settings-group premium-feature">
           <div class="premium-label">PRO VERSION</div>
           <div class="settings-title">Advanced Statistics</div>
-          <p>More detailed statistics and trends available in the Pro version.</p>
           <ul>
             <li>Player involvement in the game</li>
             <li>Trend analysis across multiple matches</li>
